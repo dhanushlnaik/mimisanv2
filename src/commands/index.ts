@@ -10,6 +10,7 @@ import { prefixCommand } from './utility/prefix.js';
 import { helpCommand } from './utility/help.js';
 import { avCommand } from './utility/av.js';
 import { bhindiCommand } from './utility/bhindi.js';
+import { setupCommand } from './configuration/setup.js';
 
 import { actionCommands } from './actions/actions.js';
 import { emotionCommands } from './actions/emotions.js';
@@ -24,6 +25,7 @@ import { rpsCommand } from './games/rps.js';
 import { truthCommand } from './games/truth.js';
 import { dareCommand } from './games/dare.js';
 import { wyrCommand } from './games/wyr.js';
+import { gambleCommand } from './games/gamble.js';
 
 import { rankCommand } from './leveling/rank.js';
 import { leaderboardCommand } from './leveling/leaderboard.js';
@@ -31,6 +33,11 @@ import { leaderboardCommand } from './leveling/leaderboard.js';
 import { balanceCommand } from './economy/balance.js';
 import { dailyCommand } from './economy/daily.js';
 import { payCommand } from './economy/pay.js';
+
+import { dungeonCommand } from './dungeon/dungeon.js';
+import { relicCommand } from './economy/relic.js';
+import { marketCommand } from './economy/market.js';
+import { profileCommand } from './economy/profile.js';
 
 import type { Command, MimiClient } from '../client.js';
 
@@ -44,6 +51,7 @@ export const commands: Command[] = [
     helpCommand,
     avCommand,
     bhindiCommand,
+    setupCommand,
 
     // Actions & Emotions (Factory)
     ...actionCommands,
@@ -60,7 +68,9 @@ export const commands: Command[] = [
     rpsCommand,
     truthCommand,
     dareCommand,
+
     wyrCommand,
+    gambleCommand,
 
     // Leveling
     rankCommand,
@@ -70,6 +80,18 @@ export const commands: Command[] = [
     balanceCommand,
     dailyCommand,
     payCommand,
+
+    // Dungeon
+    dungeonCommand,
+
+    // Inventory
+    relicCommand,
+
+    // Market
+    marketCommand,
+
+    // Profile
+    profileCommand,
 ];
 
 // Register commands with client

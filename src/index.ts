@@ -7,6 +7,9 @@ import { registerCommands } from './commands/index.js';
 import { ready } from './events/ready.js';
 import { messageCreate } from './events/messageCreate.js';
 import { interactionCreate } from './events/interactionCreate.js';
+import { voiceStateUpdate } from './events/voiceStateUpdate.js';
+import { processVoiceXp } from './services/voice.service.js';
+import { initSalaryScheduler } from './services/salary.service.js';
 
 async function main(): Promise<void> {
     try {
@@ -28,6 +31,15 @@ async function main(): Promise<void> {
         client.once(Events.ClientReady, () => ready(client));
         client.on(Events.MessageCreate, (message) => messageCreate(client, message));
         client.on(Events.InteractionCreate, (interaction) => interactionCreate(client, interaction));
+        client.on(Events.VoiceStateUpdate, (oldState, newState) => voiceStateUpdate(client, oldState, newState));
+
+        // Start VC XP loop (every minute)
+        setInterval(() => {
+            processVoiceXp().catch(err => logger.error('VC XP loop failed:', err));
+        }, 60000);
+
+        // Initialize salary scheduler
+        initSalaryScheduler();
 
         // Handle guild join - create settings
         client.on(Events.GuildCreate, async (guild) => {

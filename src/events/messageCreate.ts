@@ -2,8 +2,9 @@ import { type Message, type TextChannel } from 'discord.js';
 import type { MimiClient, CommandContext } from '../client.js';
 import { logger } from '../utils/logger.js';
 import { getGuildSettings, isModuleEnabled } from '../services/guild.service.js';
+import { getServerConfig } from '../services/config.service.js';
 import { getAfk, clearAfk, getAfkUsers } from '../services/afk.service.js';
-import { addXp } from '../services/leveling.service.js';
+import { addXp, addGlobalXp } from '../services/leveling.service.js';
 import { checkCooldown } from '../utils/cooldown.js';
 import { checkPermissions, getMemberFromContext } from '../utils/permissions.js';
 import { afkEmbed, levelUpEmbed } from '../utils/embeds.js';
@@ -128,12 +129,38 @@ async function handleAfkSystem(client: MimiClient, message: Message, afkEnabled:
 async function handleLeveling(message: Message): Promise<void> {
     if (!message.guild) return;
 
-    const result = await addXp(message.author.id, message.guild.id);
+    const config = await getServerConfig(message.guild.id);
+
+    // Check channel rules
+    if (config.xp_channels.length > 0) {
+        const inList = config.xp_channels.includes(message.channel.id);
+        if (config.xp_channel_mode === 'whitelist' && !inList) return;
+        if (config.xp_channel_mode === 'blacklist' && inList) return;
+    }
+
+    // Calculate XP
+    const baseXp = Math.floor(Math.random() * 10) + 15; // 15-25
+    const xpAmount = Math.floor(baseXp * config.xp_rate_chat);
+
+    // Add Server XP
+    const result = await addXp(message.author.id, message.guild.id, xpAmount);
 
     if (result?.leveledUp) {
         const embed = levelUpEmbed(message.author, result.newLevel);
         if ('send' in message.channel) {
             await (message.channel as TextChannel).send({ embeds: [embed] });
         }
+    }
+
+    // Add Global XP (Fixed rate)
+    try {
+        const globalResult = await addGlobalXp(message.author.id, baseXp);
+        if (globalResult.leveledUp) {
+            // Optional: Send global level up message?
+            // For now, only log it to avoid spam or add a small reaction
+            logger.debug(`User ${message.author.id} leveled up globally to ${globalResult.newLevel}`);
+        }
+    } catch (error) {
+        logger.error('Failed to add global XP:', error);
     }
 }

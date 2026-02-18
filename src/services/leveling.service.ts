@@ -1,4 +1,5 @@
 import { query } from '../database/index.js';
+import { getGlobalProfile } from './economy.service.js';
 import type { UserLevel } from '../client.js';
 import { logger } from '../utils/logger.js';
 
@@ -153,4 +154,53 @@ export async function setXp(
     );
 
     return result.rows[0];
+}
+
+// Global XP Curve
+export function xpForGlobalLevel(level: number): number {
+    return 100 * (level ** 2);
+}
+
+// Add Global XP
+export async function addGlobalXp(
+    userId: string,
+    amount: number
+): Promise<{ leveledUp: boolean; newLevel: number; xp: number; added: number }> {
+    const profile = await getGlobalProfile(userId);
+    const currentXp = BigInt(profile.global_xp);
+    const currentLevel = profile.global_level;
+
+    const xpToAdd = BigInt(amount);
+    const newXp = currentXp + xpToAdd;
+
+    // Check level up
+    let newLevel = currentLevel;
+    let leveledUp = false;
+    let required = BigInt(xpForGlobalLevel(newLevel));
+
+    // While loop for multi-leveeing
+    while (newXp >= required) {
+        newLevel++;
+        required = BigInt(xpForGlobalLevel(newLevel));
+        leveledUp = true;
+    }
+
+    // Update DB
+    await query(
+        `UPDATE users_global 
+         SET global_xp = $2, global_level = $3, updated_at = NOW()
+         WHERE user_id = $1`,
+        [userId, newXp.toString(), newLevel]
+    );
+
+    if (leveledUp) {
+        logger.debug(`User ${userId} reached Global Level ${newLevel}`);
+    }
+
+    return {
+        leveledUp,
+        newLevel,
+        xp: Number(newXp), // Be careful with precision here if very large
+        added: amount
+    };
 }

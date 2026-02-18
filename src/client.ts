@@ -140,6 +140,20 @@ export interface WeebyGifResponse {
     url: string;
 }
 
+// Global user data
+export interface UserGlobal {
+    user_id: string;
+    global_xp: string; // BigInt
+    global_level: number;
+    reputation: number;
+    balance: string; // BigInt
+    total_earnings: string; // BigInt
+    last_daily_at: Date | null;
+    last_weekly_at: Date | null;
+    created_at: Date;
+    updated_at: Date;
+}
+
 export interface WeebyGeneratorResponse {
     url: string;
 }

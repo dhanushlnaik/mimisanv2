@@ -1,5 +1,5 @@
 import { query } from '../database/index.js';
-import type { UserCurrency } from '../client.js';
+import type { UserCurrency, UserGlobal } from '../client.js';
 import { logger } from '../utils/logger.js';
 
 // Daily reward amount
@@ -151,4 +151,67 @@ export async function setBalance(
     );
 
     return result.rows[0];
+}
+// Get global profile
+export async function getGlobalProfile(userId: string): Promise<UserGlobal> {
+    const result = await query<UserGlobal>(
+        'SELECT * FROM users_global WHERE user_id = $1',
+        [userId]
+    );
+
+    if (result.rows.length > 0) {
+        return result.rows[0];
+    }
+
+    // Create new entry
+    const newResult = await query<UserGlobal>(
+        `INSERT INTO users_global (user_id, global_xp, global_level, reputation, balance, total_earnings)
+     VALUES ($1, 0, 1, 0, 0, 0)
+     RETURNING *`,
+        [userId]
+    );
+
+    return newResult.rows[0];
+}
+
+// Add global balance
+export async function addGlobalBalance(
+    userId: string,
+    amount: number
+): Promise<UserGlobal> {
+    // Ensure profile exists
+    await getGlobalProfile(userId);
+
+    const result = await query<UserGlobal>(
+        `UPDATE users_global 
+     SET balance = balance + $2, total_earnings = total_earnings + GREATEST(0, $2)
+     WHERE user_id = $1
+     RETURNING *`,
+        [userId, amount]
+    );
+
+    return result.rows[0];
+}
+
+// Transfer global balance
+export async function transferGlobalBalance(
+    fromUserId: string,
+    toUserId: string,
+    amount: number
+): Promise<{ success: boolean; error?: string }> {
+    if (amount <= 0) {
+        return { success: false, error: 'Amount must be positive' };
+    }
+
+    const fromProfile = await getGlobalProfile(fromUserId);
+    if (BigInt(fromProfile.balance) < BigInt(amount)) {
+        return { success: false, error: 'Insufficient funds' };
+    }
+
+    // Perform transfer
+    await addGlobalBalance(fromUserId, -amount);
+    await addGlobalBalance(toUserId, amount);
+
+    logger.debug(`Transferred global ${amount} from ${fromUserId} to ${toUserId}`);
+    return { success: true };
 }
